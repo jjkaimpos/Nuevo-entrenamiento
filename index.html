@@ -2,594 +2,613 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workout Master - Visual Experience</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>FitTrack Pro - Editar y Reordenar</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
-        :root { --apple-blue: #0b84ff; --apple-red: #ff453a; --apple-green: #30d158; }
-        body { font-family: 'Inter', -apple-system, sans-serif; margin: 0; background-color: #000; color: white; overflow: hidden; height: 100vh; }
+        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;600;700&display=swap');
 
-        /* Capas de Fondo */
-        .bg-layer {
-            position: fixed; inset: 0; background-size: cover; background-position: center; z-index: -1;
-            opacity: 0; transition: opacity 0.5s ease-in-out;
-        }
-        
-        .bg-layer.active { opacity: 1; }
-        
-        #bg-main { 
-            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.9)), 
-                        url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop');
-        }
-        
-        #bg-settings { 
-            background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.95)), 
-                        url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop');
+        :root {
+            --apple-dark: #000000;
+            --apple-card: #1C1C1E;
+            --apple-blue: #0A84FF;
+            --apple-green: #30D158;
+            --apple-red: #FF453A;
+            --apple-orange: #FF9500;
         }
 
-        #bg-workout { 
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,1)), 
-                        url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069&auto=format&fit=crop');
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            background-color: var(--apple-dark);
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); background: #2c2c2e; }
-
-        @keyframes colorFlow {
-            0% { color: #007AFF; }
-            33% { color: #BF5AF2; }
-            66% { color: #FF375F; }
-            100% { color: #007AFF; }
-        }
-        .animate-title { animation: colorFlow 6s linear infinite; }
-
-        @keyframes pulse-blue {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(11, 132, 255, 0.4); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(11, 132, 255, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(11, 132, 255, 0); }
+        .hero-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.95)), 
+                              url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover; background-position: center; z-index: -1;
         }
 
-        .btn-start { 
-            width: 140px; height: 140px; border-radius: 50%; 
-            background: var(--apple-blue); 
-            animation: pulse-blue 3s infinite; 
+        .view {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s;
+            overflow-y: auto;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .hidden-view {
+            opacity: 0;
+            transform: scale(0.9) translateY(40px);
+            pointer-events: none;
+        }
+
+        .apple-card {
+            background: rgba(28, 28, 30, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Estilos para Drag and Drop */
+        .exercise-item {
+            cursor: grab;
+            transition: transform 0.2s, opacity 0.2s;
+            user-select: none;
+        }
+        .exercise-item:active { cursor: grabbing; }
+        .exercise-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-start {
+            width: 200px; height: 200px; border-radius: 50%;
+            background: var(--apple-blue);
             display: flex; align-items: center; justify-content: center;
-            border: none;
+            font-size: 1.6rem; font-weight: 800;
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            animation: pulseGlow 2s infinite;
             cursor: pointer;
         }
-
-        .btn-start.locked { background: var(--apple-red); animation: none; opacity: 0.8; }
-
-        .glass-card { background: rgba(28, 28, 30, 0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; }
         
-        .panel { 
-            position: fixed; inset: 0; 
-            z-index: 50;
-            display: none; 
-            background: transparent;
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(10, 132, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0); }
         }
-        .panel.show { display: flex; flex-direction: column; }
-        
-        .workout-screen { 
-            position: absolute; inset: 0; 
-            display: none; 
-            flex-direction: column; justify-content: center; align-items: center; 
-            padding: 2rem; z-index: 10; 
-        }
-        .workout-screen.active { display: flex; z-index: 20; }
 
-        .timer-svg { transform: rotate(-90deg); width: 220px; height: 220px; }
+        .timer-container { position: relative; width: 240px; height: 240px; margin: 0 auto; }
+        .timer-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
         .timer-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 8; }
-        .timer-progress { fill: none; stroke: var(--apple-blue); stroke-width: 8; stroke-linecap: round; }
+        .timer-progress { fill: none; stroke: var(--apple-orange); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 628; stroke-dashoffset: 0; transition: stroke-dashoffset 0.1s linear; }
+        .timer-progress.rest-mode { stroke: var(--apple-blue); }
 
-        input, select { background: #2c2c2e !important; color: white !important; border-radius: 12px !important; padding: 14px !important; border: none !important; }
-        .stat-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.5); font-weight: 700; }
-        
-        .sheet { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: #1c1c1e; border-radius: 32px 32px 0 0; 
-            padding: 24px; transform: translateY(100%); 
-            transition: transform 0.3s ease; z-index: 110; 
+        .celebration-view {
+            background: linear-gradient(135deg, #000 0%, #1a1a2e 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
         }
-        .sheet.active { transform: translateY(0%); }
-
-        .stepper-container { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 8px 16px; border: 1px solid rgba(255,255,255,0.1); }
         
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .congrats-card { animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            70% { opacity: 1; transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .confetti {
+            position: absolute; width: 10px; height: 10px; background: #FFD700;
+            animation: fall 3s infinite linear;
+            border-radius: 2px;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        input { background: rgba(255,255,255,0.08) !important; border: none !important; border-radius: 14px; color: white; padding: 16px; width: 100%; outline: none; }
+        .type-selector { display: flex; background: rgba(255,255,255,0.08); border-radius: 12px; padding: 4px; }
+        .type-btn { flex: 1; padding: 10px; border-radius: 10px; font-size: 12px; font-weight: 700; transition: all 0.2s; }
+        .type-btn.active { background: white; color: black; }
+
+        .btn-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; border: 0.5px solid rgba(255,255,255,0.1); transition: background 0.2s; }
     </style>
 </head>
 <body>
 
-    <!-- Capas de Fondo -->
-    <div id="bg-main" class="bg-layer active"></div>
-    <div id="bg-settings" class="bg-layer"></div>
-    <div id="bg-workout" class="bg-layer"></div>
+    <div id="bg" class="hero-bg"></div>
 
-    <!-- VISTA PRINCIPAL -->
-    <div id="mainView" class="h-screen flex flex-col justify-between items-center p-6 relative z-10">
-        <header class="w-full max-w-md pt-4">
-            <div class="flex items-center justify-between mb-8 px-1">
-                <div class="flex items-center gap-3 bg-white/10 backdrop-blur-xl px-3 py-1.5 rounded-full border border-white/20">
-                    <img src="photo_2025-09-25_08-43-01.jpg" alt="Avatar Juanjo" class="user-avatar" onerror="this.src='https://ui-avatars.com/api/?name=Juanjo&background=0D8ABC&color=fff'">
-                    <span class="font-semibold text-sm tracking-tight text-white">Juanjo</span>
+    <!-- PANTALLA 1: INICIO -->
+    <div id="view-home" class="view px-8 pt-16 flex flex-col">
+        <header class="max-w-md mx-auto w-full mb-8">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h1 id="display-time" class="text-5xl font-bold tracking-tighter">00:00</h1>
+                    <p id="display-date" class="text-sm font-semibold text-gray-400 mt-1 uppercase tracking-widest">Cargando...</p>
                 </div>
-                <div class="flex flex-col items-end text-right">
-                    <div class="text-[10px] font-bold opacity-60 tracking-widest uppercase" id="current-date">...</div>
-                    <div class="text-xs font-bold text-blue-400 mt-0.5" id="current-time">00:00:00</div>
+                <button onclick="navigateTo('config')" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="apple-card p-4">
+                    <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest">Ejercicios</p>
+                    <p id="stat-exercises" class="text-xl font-bold mt-1">0</p>
+                </div>
+                <div class="apple-card p-4">
+                    <p class="text-[10px] font-black text-orange-400 uppercase tracking-widest">Series</p>
+                    <p id="stat-series" class="text-xl font-bold mt-1">1</p>
                 </div>
             </div>
 
-            <div class="glass-card p-6 mb-4">
-                <p class="stat-label">Ejercicios Totales</p>
-                <p class="stat-value text-4xl font-bold mt-1" id="stat-exercises">0</p>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div class="glass-card p-4">
-                    <p class="stat-label">Racha (Sesiones)</p>
-                    <div class="flex items-center gap-2 mt-1">
-                        <p class="stat-value text-xl font-bold" id="stat-streak">0</p>
-                        <span id="streak-flame" class="hidden text-xl">🔥</span>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="apple-card p-4">
+                    <div class="flex justify-between items-start">
+                        <p class="text-[10px] font-black text-red-400 uppercase tracking-widest">Racha</p>
+                        <span id="flame-icon" class="text-lg hidden">🔥</span>
                     </div>
+                    <p id="stat-streak" class="text-xl font-bold mt-1">0</p>
                 </div>
-                <div class="glass-card p-4">
-                    <p class="stat-label">Sesiones Totales</p>
-                    <p class="stat-value text-xl font-bold mt-1" id="stat-total-sessions">0</p>
-                </div>
-            </div>
-            
-            <div class="mt-4 px-2">
-                <div class="flex justify-between items-center mb-1">
-                    <p class="stat-label">Objetivo semanal</p>
-                    <p id="weekly-count" class="text-[10px] font-bold text-blue-400">0/3</p>
-                </div>
-                <div class="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                    <div id="weekly-progress-bar" class="bg-blue-500 h-full transition-all duration-700" style="width: 0%"></div>
+                <div class="apple-card p-4">
+                    <p class="text-[10px] font-black text-green-400 uppercase tracking-widest">Sesiones Totales</p>
+                    <p id="stat-total-sessions" class="text-xl font-bold mt-1">0</p>
                 </div>
             </div>
         </header>
 
-        <div class="flex flex-col items-center gap-6">
-            <div class="flex flex-col items-center gap-2">
-                <p class="stat-label">Rondas / Series</p>
-                <div class="stepper-container flex items-center gap-6">
-                    <button onclick="changeRounds(-1)" class="text-2xl font-light text-white/60 active:text-blue-400">－</button>
-                    <span id="rounds-count" class="text-2xl font-bold w-8 text-center">1</span>
-                    <button onclick="changeRounds(1)" class="text-2xl font-light text-white/60 active:text-blue-400">＋</button>
+        <div class="flex-1 flex flex-col items-center justify-center">
+            <button onclick="startWorkout()" class="btn-start shadow-xl">EMPEZAR</button>
+        </div>
+
+        <div class="max-w-md mx-auto w-full mb-10">
+             <div class="apple-card p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Objetivo Semanal</p>
+                    <p id="progress-text" class="text-[10px] font-bold text-blue-400">0 de 3</p>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div id="weekly-progress" class="h-full bg-blue-500 w-0 transition-all duration-1000"></div>
+                </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: CONFIGURACIÓN -->
+    <div id="view-config" class="view hidden-view px-6 pt-20">
+        <div class="max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-10">
+                <h2 class="text-4xl font-bold">Ajustes</h2>
+                <button onclick="navigateTo('home')" class="bg-blue-600 px-6 py-2 rounded-full font-bold text-sm">Hecho</button>
+            </div>
+            <div class="apple-card p-6 mb-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold">Series del circuito</h3>
+                    <div class="flex items-center gap-4 bg-white/5 p-2 rounded-xl">
+                        <button onclick="changeSeries(-1)" class="w-8 h-8 rounded-lg bg-white/10 font-bold">-</button>
+                        <span id="config-series" class="text-xl font-bold w-4 text-center">1</span>
+                        <button onclick="changeSeries(1)" class="w-8 h-8 rounded-lg bg-blue-600 font-bold">+</button>
+                    </div>
                 </div>
             </div>
-
-            <button id="mainStartBtn" onclick="handleStartClick()" class="btn-start text-white font-bold text-lg uppercase tracking-[4px]">Entrenar</button>
-        </div>
-
-        <footer class="mb-8 w-full flex justify-center">
-            <button onclick="openSettings()" class="flex items-center gap-3 px-8 py-4 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 active:scale-95 transition-all">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-60"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                <span class="font-semibold text-white/90 text-sm">Ajustes</span>
-            </button>
-        </footer>
-    </div>
-
-    <!-- VISTA DE ENTRENAMIENTO ACTIVO -->
-    <div id="workoutView" class="panel bg-black/80 backdrop-blur-3xl overflow-hidden">
-        <div id="workoutContainer" class="relative w-full h-full"></div>
-    </div>
-
-    <!-- PANEL DE AJUSTES -->
-    <div id="settingsPanel" class="panel p-6 overflow-hidden">
-        <div class="flex justify-between items-center mb-8 pt-4 relative z-10">
-            <h2 class="text-3xl font-bold text-white">Configurar</h2>
-            <button onclick="closeSettings()" class="w-10 h-10 flex items-center justify-center bg-white/20 rounded-full backdrop-blur-md">✕</button>
-        </div>
-        <div id="configList" class="space-y-3 overflow-y-auto flex-grow pb-32 pr-1 no-scrollbar relative z-10"></div>
-        <div class="fixed bottom-10 left-0 right-0 px-6 z-20">
-            <button onclick="openAddSheet()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/20 active:scale-95 transition-transform">+ Añadir Ejercicio</button>
-        </div>
-    </div>
-
-    <!-- HOJA PARA AÑADIR/EDITAR -->
-    <div id="addSheet" class="sheet shadow-2xl border-t border-white/10">
-        <div class="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-6"></div>
-        <h3 id="sheetTitle" class="text-xl font-bold mb-6 text-center">Ejercicio</h3>
-        <div class="space-y-4">
-            <div>
-                <label class="stat-label ml-1">Nombre</label>
-                <input type="text" id="formName" placeholder="Ej: Dominadas" class="w-full mt-1">
-            </div>
-            <div class="flex gap-4">
-                <div class="flex-1">
-                    <label class="stat-label ml-1">Modalidad</label>
-                    <select id="formType" class="w-full mt-1" onchange="updateFormLabel()">
-                        <option value="reps">Repeticiones</option>
-                        <option value="time">Segundos</option>
-                    </select>
-                </div>
-                <div class="flex-1">
-                    <label id="valueLabel" class="stat-label ml-1">Cantidad</label>
-                    <input type="number" id="formValue" placeholder="0" class="w-full mt-1">
+            <div class="apple-card p-6 mb-8">
+                <p id="form-title" class="text-xs font-black text-blue-400 uppercase mb-4">Nuevo Ejercicio</p>
+                <div class="space-y-4">
+                    <input type="text" id="ex-name" placeholder="Nombre">
+                    <div class="flex gap-3">
+                        <input type="number" id="ex-val" placeholder="Cantidad" class="flex-1">
+                        <div class="type-selector w-32">
+                            <button onclick="toggleType('reps')" id="btn-reps" class="type-btn active">REPS</button>
+                            <button onclick="toggleType('time')" id="btn-time" class="type-btn">TIME</button>
+                        </div>
+                    </div>
+                    <button id="btn-add-ex" onclick="addExercise()" class="w-full bg-white text-black py-4 rounded-2xl font-black uppercase text-xs">Añadir</button>
+                    <button id="btn-cancel-edit" onclick="cancelEdit()" class="hidden w-full bg-white/10 text-gray-400 py-3 rounded-2xl font-bold text-xs">Cancelar Edición</button>
                 </div>
             </div>
-            <div class="flex gap-3 pt-6">
-                <button onclick="closeAddSheet()" class="flex-1 py-4 text-white/50 font-bold">Cancelar</button>
-                <button onclick="saveExercise()" class="flex-1 py-4 bg-blue-600 rounded-xl font-bold">Confirmar</button>
+            
+            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Mantén presionado para reordenar</p>
+            <div id="exercise-list" class="space-y-3 pb-20"></div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 3: ENTRENAMIENTO ACTIVO -->
+    <div id="view-active" class="view hidden-view flex flex-col items-center px-6 pt-16">
+        <div class="max-w-md w-full text-center flex flex-col h-full">
+            <div class="flex justify-between items-center mb-12">
+                <div class="text-left">
+                    <p id="active-series-count" class="text-xs font-black text-blue-400 uppercase tracking-widest">Serie 1</p>
+                    <p id="active-ex-count" class="text-sm font-bold text-gray-400">Ejercicio 1</p>
+                </div>
+                <button onclick="exitWorkout()" class="text-xs font-bold text-red-400 bg-red-400/10 px-4 py-2 rounded-full">Salir</button>
+            </div>
+            <div class="flex-1 flex flex-col justify-center mb-20">
+                <h2 id="active-ex-name" class="text-4xl font-black mb-12 leading-tight uppercase">NOMBRE</h2>
+                <div id="ui-reps" class="hidden">
+                    <div class="text-8xl font-black mb-4" id="active-reps-val">0</div>
+                    <button onclick="nextStep()" class="w-full bg-blue-600 py-6 rounded-3xl font-bold text-xl">Hecho</button>
+                </div>
+                <div id="ui-time" class="hidden">
+                    <div class="timer-container mb-8">
+                        <svg class="timer-svg"><circle class="timer-bg" cx="120" cy="120" r="100"></circle><circle id="timer-bar" class="timer-progress" cx="120" cy="120" r="100"></circle></svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="timer-text" class="text-7xl font-black">00</span>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <button id="btn-timer-control" onclick="toggleTimer()" class="w-full bg-orange-500 py-6 rounded-3xl font-bold text-xl">Empezar</button>
+                        <button id="btn-skip-rest" onclick="skipRest()" class="hidden w-full bg-white/10 py-4 rounded-2xl font-bold text-gray-400">Saltar Descanso</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- PANTALLA 4: FELICITACIONES -->
+    <div id="view-congrats" class="view hidden-view celebration-view px-8 overflow-hidden">
+        <div id="confetti-container"></div>
+        <div class="congrats-card max-w-sm w-full">
+            <div class="text-8xl mb-6">🏆</div>
+            <h2 class="text-5xl font-black mb-4 tracking-tighter">¡BRUTAL!</h2>
+            <p id="congrats-msg" class="text-xl text-gray-300 mb-12 font-medium">Has superado todos los límites hoy.</p>
+            
+            <div class="apple-card p-6 mb-12 text-left">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="bg-blue-500/20 p-3 rounded-2xl">🔥</div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Nueva Racha</p>
+                        <p id="final-streak" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+                <p class="text-xs text-blue-400 font-bold italic">"La constancia es el camino al éxito"</p>
+            </div>
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'workout-visual-v6';
+            <button onclick="navigateTo('home')" class="w-full bg-white text-black py-6 rounded-3xl font-black text-lg shadow-2xl">VOLVER AL INICIO</button>
+        </div>
+    </div>
 
-        let user = null;
+    <script>
+        // --- ESTADO ---
+        let exercises = JSON.parse(localStorage.getItem('ft_exercises')) || [];
+        let totalSeries = parseInt(localStorage.getItem('ft_series')) || 1;
+        let history = JSON.parse(localStorage.getItem('ft_history')) || [];
+        
+        let activeExIndex = 0;
+        let activeSeriesIndex = 1;
+        let currentType = 'reps';
+        let isResting = false;
+        let timerInterval = null;
+        let timeLeft = 0;
+        let totalTime = 0;
         let editingId = null;
-        let currentExercises = [];
-        let activeStepIdx = 0;
-        let animationFrameReq = null;
-        let totalRounds = 1;
-        let isLocked = false;
-        let lockClicks = 0;
-        let workoutFlow = [];
 
-        // Función para emitir sonido al terminar
-        function playAlertSound() {
+        // --- VOZ ---
+        function say(text) {
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance("¡Tiempo!");
+                const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'es-ES';
-                utterance.rate = 1.2;
+                utterance.rate = 1.1;
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-        const bgLayers = {
-            main: document.getElementById('bg-main'),
-            settings: document.getElementById('bg-settings'),
-            workout: document.getElementById('bg-workout')
-        };
-
-        function setBg(key) {
-            Object.keys(bgLayers).forEach(k => {
-                if (k === key) bgLayers[k].classList.add('active');
-                else bgLayers[k].classList.remove('active');
-            });
-        }
-
-        function showView(viewId) {
-            document.getElementById('mainView').style.display = (viewId === 'mainView') ? 'flex' : 'none';
-            document.getElementById('workoutView').classList.toggle('show', viewId === 'workoutView');
-            document.getElementById('settingsPanel').classList.toggle('show', viewId === 'settingsPanel');
-        }
-
-        function updateClock() {
-            const now = new Date();
-            const dateOpts = { weekday: 'long', day: 'numeric', month: 'long' };
-            document.getElementById('current-date').innerText = new Intl.DateTimeFormat('es-ES', dateOpts).format(now);
-            document.getElementById('current-time').innerText = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        function getYearAndWeek(date) {
-            const d = date || new Date();
-            d.setHours(0,0,0,0);
-            d.setDate(d.getDate() + 4 - (d.getDay()||7));
-            const yearStart = new Date(d.getFullYear(),0,1);
-            const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-            return `${d.getFullYear()}-W${weekNo}`;
-        }
-
-        window.handleStartClick = () => {
-            if (isLocked) {
-                lockClicks++;
-                if (lockClicks >= 5) { unlockButton(); lockClicks = 0; }
-                return;
+        // --- NAVEGACIÓN ---
+        function navigateTo(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden-view'));
+            document.getElementById(`view-${id}`).classList.remove('hidden-view');
+            
+            if(id === 'home') {
+                loadHome();
+                clearConfetti();
             }
-            if (currentExercises.length === 0) return;
-            startWorkout();
-        };
-
-        function lockButton() {
-            isLocked = true;
-            const btn = document.getElementById('mainStartBtn');
-            btn.classList.add('locked');
-            btn.innerText = "HECHO";
+            if(id === 'config') {
+                cancelEdit();
+                renderConfig();
+            }
+            if(id === 'congrats') startCelebration();
         }
 
-        function unlockButton() {
-            isLocked = false;
-            const btn = document.getElementById('mainStartBtn');
-            btn.classList.remove('locked');
-            btn.innerText = "ENTRENAR";
+        // --- CELEBRACIÓN ---
+        function startCelebration() {
+            const msgs = [
+                "¡Eres una máquina imparable!",
+                "Has dominado el entrenamiento.",
+                "Tu cuerpo te lo agradecerá mañana.",
+                "Nivel de energía: ¡Máximo!",
+                "Un paso más cerca de tu mejor versión."
+            ];
+            document.getElementById('congrats-msg').innerText = msgs[Math.floor(Math.random() * msgs.length)];
+            document.getElementById('final-streak').innerText = history.length;
+            
+            const container = document.getElementById('confetti-container');
+            const colors = ['#0A84FF', '#30D158', '#FF9500', '#FF453A', '#BF5AF2'];
+            
+            for(let i=0; i<50; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                c.style.animationDelay = Math.random() * 2 + 's';
+                c.style.width = (Math.random() * 8 + 4) + 'px';
+                c.style.height = c.style.width;
+                container.appendChild(c);
+            }
+            say("¡Enhorabuena! Sesión completada con éxito. Eres una bestia.");
         }
 
-        window.changeRounds = (delta) => {
-            totalRounds = Math.max(1, totalRounds + delta);
-            document.getElementById('rounds-count').innerText = totalRounds;
-            updateStatsSummary();
-        };
-
-        function updateStatsSummary() {
-            document.getElementById('stat-exercises').innerText = currentExercises.length * totalRounds;
+        function clearConfetti() {
+            document.getElementById('confetti-container').innerHTML = '';
         }
 
-        window.startWorkout = () => {
-            setBg('workout');
-            showView('workoutView');
-            activeStepIdx = 0;
-            const container = document.getElementById('workoutContainer');
-            container.innerHTML = '';
+        // --- CONFIGURACIÓN & EDICIÓN ---
+        function toggleType(type) {
+            currentType = type;
+            document.getElementById('btn-reps').classList.toggle('active', type === 'reps');
+            document.getElementById('btn-time').classList.toggle('active', type === 'time');
+        }
 
-            workoutFlow = [];
-            for (let r = 1; r <= totalRounds; r++) {
-                currentExercises.forEach(ex => workoutFlow.push({ ...ex, round: r, isRest: false }));
-                if (r < totalRounds) workoutFlow.push({ name: 'Descanso', value: 60, isRest: true, round: r, type: 'time' });
+        function changeSeries(val) {
+            totalSeries = Math.max(1, totalSeries + val);
+            document.getElementById('config-series').innerText = totalSeries;
+            localStorage.setItem('ft_series', totalSeries);
+        }
+
+        function addExercise() {
+            const name = document.getElementById('ex-name').value;
+            const val = document.getElementById('ex-val').value;
+            if(!name || !val) return;
+
+            if (editingId) {
+                // Modo Edición
+                const index = exercises.findIndex(ex => ex.id === editingId);
+                if (index !== -1) {
+                    exercises[index] = { ...exercises[index], name, value: parseInt(val), type: currentType };
+                }
+                cancelEdit();
+            } else {
+                // Modo Añadir
+                exercises.push({ id: Date.now(), name, value: parseInt(val), type: currentType });
             }
 
-            workoutFlow.forEach((ex, i) => {
-                const screen = document.createElement('div');
-                screen.className = `workout-screen ${i === 0 ? 'active' : ''}`;
-                screen.id = `step-${i}`;
+            saveExercises();
+            document.getElementById('ex-name').value = ""; 
+            document.getElementById('ex-val').value = "";
+            renderConfig();
+        }
+
+        function editEx(id) {
+            const ex = exercises.find(e => e.id === id);
+            if (!ex) return;
+
+            editingId = id;
+            document.getElementById('ex-name').value = ex.name;
+            document.getElementById('ex-val').value = ex.value;
+            toggleType(ex.type);
+
+            document.getElementById('form-title').innerText = "Editando Ejercicio";
+            document.getElementById('btn-add-ex').innerText = "Actualizar Ejercicio";
+            document.getElementById('btn-add-ex').classList.replace('bg-white', 'bg-blue-600');
+            document.getElementById('btn-add-ex').classList.replace('text-black', 'text-white');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            
+            // Scroll al inicio del form
+            document.getElementById('view-config').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            document.getElementById('ex-name').value = ""; 
+            document.getElementById('ex-val').value = "";
+            document.getElementById('form-title').innerText = "Nuevo Ejercicio";
+            document.getElementById('btn-add-ex').innerText = "Añadir";
+            document.getElementById('btn-add-ex').classList.replace('bg-blue-600', 'bg-white');
+            document.getElementById('btn-add-ex').classList.replace('text-white', 'text-black');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        }
+
+        function saveExercises() {
+            localStorage.setItem('ft_exercises', JSON.stringify(exercises));
+        }
+
+        function renderConfig() {
+            const list = document.getElementById('exercise-list');
+            list.innerHTML = '';
+            
+            exercises.forEach((ex, index) => {
+                const item = document.createElement('div');
+                item.className = 'exercise-item apple-card p-4 flex items-center justify-between';
+                item.draggable = true;
+                item.dataset.id = ex.id;
+                item.dataset.index = index;
                 
-                let ui = `
-                    <div class="absolute top-10 left-10 flex flex-col gap-1">
-                        <div class="text-white/40 font-bold text-[10px] tracking-widest uppercase">Paso ${i + 1} / ${workoutFlow.length}</div>
-                        <div class="text-blue-400 font-bold text-xs tracking-[2px] uppercase">Ronda ${ex.round} de ${totalRounds}</div>
+                item.innerHTML = `
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="text-gray-600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9h8M8 15h8"></path></svg></div>
+                        <div>
+                            <p class="font-bold">${ex.name}</p>
+                            <p class="text-xs text-gray-500">${ex.value} ${ex.type === 'time' ? 'seg' : 'reps'}</p>
+                        </div>
                     </div>
-                    <button onclick="exitWorkout()" class="absolute top-10 right-10 text-white/60 text-xs font-bold uppercase tracking-widest">Salir</button>
-                    <div class="text-center flex flex-col items-center w-full">
-                        <h2 class="text-5xl md:text-7xl font-black mb-12 ${ex.isRest ? 'text-green-400' : 'animate-title'} tracking-tighter px-4">${ex.name}</h2>
+                    <div class="flex gap-2">
+                        <button onclick="editEx(${ex.id})" class="text-blue-400 p-2 bg-blue-400/10 rounded-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="removeEx(${ex.id})" class="text-red-400 p-2 bg-red-400/10 rounded-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
                 `;
 
-                if (ex.type === 'time') {
-                    ui += `
-                        <div class="relative mb-16 flex items-center justify-center">
-                            <svg class="timer-svg"><circle class="timer-bg" cx="110" cy="110" r="100"></circle><circle id="progress-${i}" class="timer-progress" cx="110" cy="110" r="100" style="stroke-dasharray: 628; stroke-dashoffset: 0;"></circle></svg>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <span id="time-val-${i}" class="text-6xl font-bold">${ex.value}</span>
-                                <p class="text-[10px] uppercase font-bold tracking-widest text-white/40">Segundos</p>
-                            </div>
-                        </div>
-                        <button id="timer-btn-${i}" onclick="runTimer(${i}, ${ex.value})" class="w-full max-w-[200px] bg-blue-600 text-white py-5 rounded-full font-bold text-lg shadow-lg">
-                            ${ex.isRest ? 'Saltar' : 'Iniciar'}
-                        </button>
-                    `;
-                } else {
-                    ui += `
-                        <div class="mb-16"><span class="text-[120px] font-bold leading-none">${ex.value}</span><p class="text-sm font-bold uppercase tracking-[8px] text-white/50">Repeticiones</p></div>
-                        <button onclick="goToNextStep()" class="w-full max-w-[200px] bg-white text-black py-5 rounded-full font-bold text-lg shadow-lg">Hecho</button>
-                    `;
-                }
-                screen.innerHTML = ui + `</div>`;
-                container.appendChild(screen);
-            });
+                // Eventos Drag and Drop
+                item.addEventListener('dragstart', (e) => {
+                    item.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', index);
+                });
 
-            const end = document.createElement('div');
-            end.className = `workout-screen`;
-            end.id = `step-${workoutFlow.length}`;
-            end.innerHTML = `
-                <div class="text-center flex flex-col items-center">
-                    <div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-xl shadow-green-500/30">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <h2 class="text-4xl font-bold mb-4">¡Gran trabajo!</h2>
-                    <p class="text-white/60 mb-10">Has terminado tu rutina de hoy.</p>
-                    <button onclick="completeWorkoutSession()" class="px-12 py-5 bg-white text-black rounded-full font-bold shadow-xl">Finalizar</button>
-                </div>
-            `;
-            container.appendChild(end);
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                    saveExercises();
+                });
 
-            if (workoutFlow[0].type === 'time' && workoutFlow[0].isRest) {
-                runTimer(0, workoutFlow[0].value);
-            }
-        };
-
-        window.runTimer = (idx, totalDurationSeconds) => {
-            const btn = document.getElementById(`timer-btn-${idx}`);
-            const display = document.getElementById(`time-val-${idx}`);
-            const circle = document.getElementById(`progress-${idx}`);
-            const dash = 628;
-            
-            if (workoutFlow[idx] && workoutFlow[idx].isRest) {
-                if (animationFrameReq) { 
-                    goToNextStep();
-                    return;
-                }
-                if (btn) btn.innerText = "Saltar";
-            } else {
-                if (btn) btn.style.display = 'none';
-            }
-
-            const startTime = performance.now();
-            const durationMs = totalDurationSeconds * 1000;
-
-            function update(currentTime) {
-                const elapsedMs = currentTime - startTime;
-                const progress = Math.min(elapsedMs / durationMs, 1);
-                const remainingSeconds = Math.ceil((durationMs - elapsedMs) / 1000);
-
-                // Actualizar círculo suavemente
-                circle.style.strokeDashoffset = progress * dash;
-
-                // Actualizar texto cada segundo (para que sea legible)
-                if (display) display.innerText = Math.max(0, remainingSeconds);
-
-                if (progress < 1) {
-                    animationFrameReq = requestAnimationFrame(update);
-                } else {
-                    animationFrameReq = null;
-                    playAlertSound();
-                    goToNextStep();
-                }
-            }
-
-            animationFrameReq = requestAnimationFrame(update);
-        };
-
-        window.goToNextStep = () => {
-            if (animationFrameReq) {
-                cancelAnimationFrame(animationFrameReq);
-                animationFrameReq = null;
-            }
-            const current = document.getElementById(`step-${activeStepIdx}`);
-            if (current) current.classList.remove('active');
-            activeStepIdx++;
-            const next = document.getElementById(`step-${activeStepIdx}`);
-            if (next) {
-                next.classList.add('active');
-                if (workoutFlow[activeStepIdx] && workoutFlow[activeStepIdx].isRest) {
-                    runTimer(activeStepIdx, workoutFlow[activeStepIdx].value);
-                }
-            }
-        };
-
-        window.completeWorkoutSession = async () => {
-            if (!user) return;
-            const weekKey = getYearAndWeek();
-            const sRef = doc(db, 'artifacts', appId, 'users', user.uid, 'stats', 'overall');
-            const snap = await getDoc(sRef);
-            
-            let data = snap.exists() ? snap.data() : { streak: 0, totalSessions: 0, lastWeek: '', wCount: 0 };
-            
-            let nStreak = (data.streak || 0) + 1;
-            let nWCount = (data.lastWeek === weekKey) ? (data.wCount || 0) + 1 : 1;
-
-            await setDoc(sRef, {
-                streak: nStreak,
-                totalSessions: increment(1),
-                wCount: nWCount,
-                lastWeek: weekKey,
-                lastDate: serverTimestamp()
-            }, { merge: true });
-
-            lockButton();
-            exitWorkout();
-        };
-
-        window.exitWorkout = () => {
-            if (animationFrameReq) {
-                cancelAnimationFrame(animationFrameReq);
-                animationFrameReq = null;
-            }
-            showView('mainView');
-            setBg('main');
-        };
-
-        onAuthStateChanged(auth, async u => {
-            if (u) { user = u; startAppSync(); } 
-            else { 
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                else await signInAnonymously(auth);
-            }
-        });
-
-        function startAppSync() {
-            onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'exercises'), snap => {
-                const list = []; snap.forEach(d => list.push({id: d.id, ...d.data()}));
-                list.sort((a,b) => (a.order||0) - (b.order||0));
-                currentExercises = list;
-                updateStatsSummary();
-                document.getElementById('configList').innerHTML = list.map((e, i) => `
-                    <div class="glass-card p-4 flex justify-between items-center" data-id="${e.id}">
-                        <div class="flex items-center gap-3">
-                            <div class="drag-handle text-white/30 cursor-grab active:cursor-grabbing p-1">☰</div>
-                            <div>
-                                <h4 class="font-bold text-sm">${e.name}</h4>
-                                <p class="text-[10px] uppercase text-white/50">${e.value} ${e.type === 'reps' ? 'reps' : 'seg'}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="openAddSheet('${e.id}', ${i})" class="p-2 bg-white/10 rounded-lg">✎</button>
-                            <button onclick="deleteExercise('${e.id}')" class="p-2 bg-white/10 rounded-lg">✕</button>
-                        </div>
-                    </div>
-                `).join('');
-            });
-
-            onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'stats', 'overall'), snap => {
-                if (snap.exists()) {
-                    const d = snap.data();
-                    const wk = getYearAndWeek();
-                    let s = d.streak || 0;
-                    let wc = d.wCount || 0;
-                    
-                    if (d.lastWeek && d.lastWeek !== wk) { wc = 0; }
-                    
-                    document.getElementById('stat-streak').innerText = s;
-                    document.getElementById('stat-total-sessions').innerText = d.totalSessions || 0;
-                    document.getElementById('streak-flame').classList.toggle('hidden', s === 0);
-                    const p = Math.min(100, (wc / 3) * 100);
-                    document.getElementById('weekly-progress-bar').style.width = `${p}%`;
-                    document.getElementById('weekly-count').innerText = `${wc}/3`;
-                    
-                    if (d.lastDate) {
-                        const isToday = d.lastDate.toDate().toDateString() === new Date().toDateString();
-                        if (isToday) lockButton(); else unlockButton();
-                    }
-                }
-            });
-
-            Sortable.create(document.getElementById('configList'), {
-                animation: 150, handle: '.drag-handle',
-                onEnd: () => {
-                    const items = document.querySelectorAll('#configList [data-id]');
-                    items.forEach(async (it, i) => {
-                        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'exercises', it.dataset.id), { order: i });
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const draggingItem = list.querySelector('.dragging');
+                    const siblings = [...list.querySelectorAll('.exercise-item:not(.dragging)')];
+                    let nextSibling = siblings.find(sibling => {
+                        return e.clientY <= sibling.offsetTop + sibling.offsetHeight / 2;
                     });
-                }
+                    
+                    if (draggingItem) {
+                        list.insertBefore(draggingItem, nextSibling);
+                    }
+                });
+
+                item.addEventListener('drop', () => {
+                    const newOrderIds = [...list.querySelectorAll('.exercise-item')].map(el => parseInt(el.dataset.id));
+                    const newExercises = newOrderIds.map(id => exercises.find(ex => ex.id === id));
+                    exercises = newExercises;
+                    saveExercises();
+                });
+
+                list.appendChild(item);
             });
         }
 
-        window.openSettings = () => { setBg('settings'); showView('settingsPanel'); };
-        window.closeSettings = () => { setBg('main'); showView('mainView'); };
-        
-        window.openAddSheet = (id = null, idx = null) => {
-            editingId = id;
-            if (id) {
-                const ex = currentExercises[idx];
-                document.getElementById('formName').value = ex.name;
-                document.getElementById('formType').value = ex.type;
-                document.getElementById('formValue').value = ex.value;
-                document.getElementById('sheetTitle').innerText = "Editar Ejercicio";
+        function removeEx(id) {
+            if (editingId === id) cancelEdit();
+            exercises = exercises.filter(ex => ex.id !== id);
+            saveExercises();
+            renderConfig();
+        }
+
+        // --- ENTRENAMIENTO ---
+        function startWorkout() {
+            if(exercises.length === 0) return alert("Configura ejercicios primero");
+            activeExIndex = 0; activeSeriesIndex = 1; isResting = false;
+            navigateTo('active'); updateActiveUI();
+        }
+
+        function updateActiveUI() {
+            const ex = exercises[activeExIndex];
+            document.getElementById('active-series-count').innerText = `Serie ${activeSeriesIndex} de ${totalSeries}`;
+            document.getElementById('active-ex-count').innerText = `Ej. ${activeExIndex + 1} de ${exercises.length}`;
+            document.getElementById('active-ex-name').innerText = ex.name;
+            document.getElementById('btn-skip-rest').classList.add('hidden');
+            if(ex.type === 'reps') {
+                document.getElementById('ui-reps').classList.remove('hidden');
+                document.getElementById('ui-time').classList.add('hidden');
+                document.getElementById('active-reps-val').innerText = ex.value;
             } else {
-                document.getElementById('formName').value = '';
-                document.getElementById('formValue').value = '';
-                document.getElementById('sheetTitle').innerText = "Nuevo Ejercicio";
+                document.getElementById('ui-reps').classList.add('hidden');
+                document.getElementById('ui-time').classList.remove('hidden');
+                document.getElementById('timer-bar').classList.remove('rest-mode');
+                resetTimer(ex.value);
             }
-            document.getElementById('addSheet').classList.add('active');
-        };
+        }
 
-        window.closeAddSheet = () => document.getElementById('addSheet').classList.remove('active');
+        function startRest() {
+            isResting = true; document.getElementById('active-ex-name').innerText = "Descanso";
+            document.getElementById('ui-reps').classList.add('hidden'); document.getElementById('ui-time').classList.remove('hidden');
+            document.getElementById('timer-bar').classList.add('rest-mode'); document.getElementById('btn-skip-rest').classList.remove('hidden');
+            resetTimer(60); toggleTimer();
+        }
 
-        window.updateFormLabel = () => {
-            const t = document.getElementById('formType').value;
-            document.getElementById('valueLabel').innerText = t === 'reps' ? 'Repeticiones' : 'Segundos';
-        };
+        function resetTimer(seconds) {
+            clearInterval(timerInterval); timerInterval = null;
+            timeLeft = seconds; totalTime = seconds; updateTimerDisplay();
+            const btn = document.getElementById('btn-timer-control');
+            if(isResting) btn.classList.add('hidden');
+            else { btn.classList.remove('hidden'); btn.innerText = "Empezar"; btn.className = "w-full bg-orange-500 py-6 rounded-3xl font-bold text-xl"; }
+        }
 
-        window.saveExercise = async () => {
-            const n = document.getElementById('formName').value;
-            const t = document.getElementById('formType').value;
-            const v = parseInt(document.getElementById('formValue').value);
-            if (!n || isNaN(v)) return;
-            const ref = collection(db, 'artifacts', appId, 'users', user.uid, 'exercises');
-            if (editingId) await updateDoc(doc(ref, editingId), { name: n, type: t, value: v });
-            else await addDoc(ref, { name: n, type: t, value: v, order: currentExercises.length });
-            closeAddSheet();
-        };
-
-        window.deleteExercise = async (id) => {
-            if (confirm("¿Eliminar este ejercicio?")) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'exercises', id));
+        function toggleTimer() {
+            if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            else {
+                timerInterval = setInterval(() => {
+                    timeLeft -= 0.1;
+                    if(timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        say("Tiempo");
+                        if(isResting) endRest(); else nextStep();
+                    }
+                    updateTimerDisplay();
+                }, 100);
             }
-        };
+        }
 
+        function updateTimerDisplay() {
+            document.getElementById('timer-text').innerText = Math.ceil(timeLeft);
+            document.getElementById('timer-bar').style.strokeDashoffset = 628 - (timeLeft / totalTime * 628);
+        }
+
+        function skipRest() { if(isResting) endRest(); }
+        function endRest() { isResting = false; updateActiveUI(); }
+
+        function nextStep() {
+            activeExIndex++;
+            if(activeExIndex >= exercises.length) {
+                activeExIndex = 0; activeSeriesIndex++;
+                if(activeSeriesIndex <= totalSeries) startRest(); else finishWorkout();
+            } else updateActiveUI();
+        }
+
+        function finishWorkout() {
+            history.push({ date: Date.now() });
+            localStorage.setItem('ft_history', JSON.stringify(history));
+            navigateTo('congrats');
+        }
+
+        function exitWorkout() { if(confirm("¿Salir?")) { clearInterval(timerInterval); navigateTo('home'); } }
+
+        // --- LÓGICA DE HOME ---
+        function getWeeklySessions() {
+            const now = new Date();
+            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)));
+            startOfWeek.setHours(0,0,0,0);
+            return history.filter(h => h.date >= startOfWeek.getTime()).length;
+        }
+
+        function loadHome() {
+            const weeklyCount = getWeeklySessions();
+            document.getElementById('stat-exercises').innerText = exercises.length;
+            document.getElementById('stat-series').innerText = totalSeries;
+            document.getElementById('stat-total-sessions').innerText = history.length;
+            document.getElementById('stat-streak').innerText = history.length;
+            
+            const flame = document.getElementById('flame-icon');
+            if (history.length > 0) flame.classList.remove('hidden');
+            else flame.classList.add('hidden');
+
+            const goal = 3;
+            const progress = Math.min((weeklyCount / goal) * 100, 100);
+            document.getElementById('weekly-progress').style.width = progress + "%";
+            document.getElementById('progress-text').innerText = `${weeklyCount} de ${goal} esta semana`;
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('display-time').innerText = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('display-date').innerText = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' });
+        }
+
+        setInterval(updateTime, 1000);
+        window.onload = () => { updateTime(); loadHome(); };
     </script>
 </body>
 </html>
