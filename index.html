@@ -13,6 +13,7 @@
 
     <link rel="apple-touch-icon" href="Ejercicio.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;600;700&display=swap');
 
@@ -444,13 +445,17 @@
             
             exercises.forEach((ex, index) => {
                 const item = document.createElement('div');
-                item.className = 'exercise-item apple-card p-4 flex items-center justify-between';
-                item.draggable = true;
-                item.dataset.index = index; // Guardamos la posición original
+                // Añadimos 'sortable-item' para que la librería lo reconozca
+                item.className = 'exercise-item sortable-item apple-card p-4 flex items-center justify-between';
+                item.dataset.id = ex.id;
                 
                 item.innerHTML = `
                     <div class="flex items-center gap-4 flex-1">
-                        <div class="text-gray-600 handle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9h8M8 15h8"></path></svg></div>
+                        <div class="text-gray-600 drag-handle cursor-move">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 8h16M4 16h16"></path>
+                            </svg>
+                        </div>
                         <div>
                             <p class="font-bold">${ex.name}</p>
                             <p class="text-xs text-gray-500">${ex.value} ${ex.type === 'time' ? 'seg' : 'reps'}</p>
@@ -470,47 +475,23 @@
                         </button>
                     </div>
                 `;
-
-                // Eventos de Drag
-                item.addEventListener('dragstart', (e) => {
-                    item.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', index);
-                });
-
-                item.addEventListener('dragend', () => {
-                    item.classList.remove('dragging');
-                    // Al terminar, regeneramos la lista visual para asegurar que los índices coincidan
-                    renderConfig(); 
-                });
-
-                item.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    const draggingItem = list.querySelector('.dragging');
-                    const siblings = [...list.querySelectorAll('.exercise-item:not(.dragging)')];
-                    
-                    let nextSibling = siblings.find(sibling => {
-                        return e.clientY <= sibling.offsetTop + sibling.offsetHeight / 2;
-                    });
-                    
-                    if (draggingItem && draggingItem !== nextSibling) {
-                        list.insertBefore(draggingItem, nextSibling);
-                    }
-                });
-
-                item.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    // Obtenemos el nuevo orden basado en cómo han quedado los elementos en el DOM
-                    const items = [...list.querySelectorAll('.exercise-item')];
-                    const newExercises = items.map(el => {
-                        const originalIndex = el.dataset.index;
-                        return exercises[originalIndex];
-                    });
-                    
-                    exercises = newExercises;
-                    saveExercises();
-                });
-
                 list.appendChild(item);
+            });
+
+            // Inicializar SortableJS para que funcione con el dedo
+            new Sortable(list, {
+                animation: 150,
+                handle: '.drag-handle', // Solo se mueve si arrastras desde las rayitas
+                ghostClass: 'dragging',
+                onEnd: function() {
+                    // Al soltar, leemos el nuevo orden de los IDs
+                    const items = [...list.querySelectorAll('.sortable-item')];
+                    const newOrder = items.map(el => {
+                        return exercises.find(ex => ex.id == el.dataset.id);
+                    });
+                    exercises = newOrder;
+                    saveExercises();
+                }
             });
         }
 
