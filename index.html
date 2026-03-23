@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FitTrack Pro - Editar y Reordenar</title>
+    <title>FitTrack Pro - Edición y Voz</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;600;700&display=swap');
@@ -57,7 +57,6 @@
             border: 0.5px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Estilos para Drag and Drop */
         .exercise-item {
             cursor: grab;
             transition: transform 0.2s, opacity 0.2s;
@@ -129,7 +128,7 @@
 
     <div id="bg" class="hero-bg"></div>
 
-    <!-- PANTALLA 1: INICIO -->
+    <!-- HOME -->
     <div id="view-home" class="view px-8 pt-16 flex flex-col">
         <header class="max-w-md mx-auto w-full mb-8">
             <div class="flex justify-between items-start mb-6">
@@ -170,6 +169,7 @@
 
         <div class="flex-1 flex flex-col items-center justify-center">
             <button onclick="startWorkout()" class="btn-start shadow-xl">EMPEZAR</button>
+            <p class="text-[10px] text-gray-500 mt-6 font-bold tracking-widest uppercase opacity-40">Toca para activar audio</p>
         </div>
 
         <div class="max-w-md mx-auto w-full mb-10">
@@ -185,7 +185,7 @@
         </div>
     </div>
 
-    <!-- PANTALLA 2: CONFIGURACIÓN -->
+    <!-- CONFIG -->
     <div id="view-config" class="view hidden-view px-6 pt-20">
         <div class="max-w-md mx-auto">
             <div class="flex justify-between items-center mb-10">
@@ -223,7 +223,7 @@
         </div>
     </div>
 
-    <!-- PANTALLA 3: ENTRENAMIENTO ACTIVO -->
+    <!-- ENTRENAMIENTO -->
     <div id="view-active" class="view hidden-view flex flex-col items-center px-6 pt-16">
         <div class="max-w-md w-full text-center flex flex-col h-full">
             <div class="flex justify-between items-center mb-12">
@@ -255,7 +255,7 @@
         </div>
     </div>
 
-    <!-- PANTALLA 4: FELICITACIONES -->
+    <!-- CONGRATS -->
     <div id="view-congrats" class="view hidden-view celebration-view px-8 overflow-hidden">
         <div id="confetti-container"></div>
         <div class="congrats-card max-w-sm w-full">
@@ -271,7 +271,6 @@
                         <p id="final-streak" class="text-2xl font-bold">0</p>
                     </div>
                 </div>
-                <p class="text-xs text-blue-400 font-bold italic">"La constancia es el camino al éxito"</p>
             </div>
 
             <button onclick="navigateTo('home')" class="w-full bg-white text-black py-6 rounded-3xl font-black text-lg shadow-2xl">VOLVER AL INICIO</button>
@@ -292,14 +291,38 @@
         let timeLeft = 0;
         let totalTime = 0;
         let editingId = null;
+        let isVoiceEnabled = false;
 
-        // --- VOZ ---
+        // --- SISTEMA DE VOZ MEJORADO ---
         function say(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'es-ES';
-                utterance.rate = 1.1;
-                window.speechSynthesis.speak(utterance);
+            if (!('speechSynthesis' in window)) return;
+            
+            // Cancelar cualquier mensaje pendiente
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.rate = 1.0;
+            utterance.volume = 1.0;
+            
+            // Forzar selección de voz si es posible (especialmente en iOS/Android)
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                const preferredVoice = voices.find(v => v.lang.includes('es-ES')) || voices[0];
+                utterance.voice = preferredVoice;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Activación inicial requerida por navegadores móviles
+        function initVoiceSystem() {
+            if (!isVoiceEnabled) {
+                // Mensaje corto y silencioso para "despertar" al navegador
+                const wakeUp = new SpeechSynthesisUtterance("");
+                wakeUp.volume = 0;
+                window.speechSynthesis.speak(wakeUp);
+                isVoiceEnabled = true;
             }
         }
 
@@ -321,14 +344,6 @@
 
         // --- CELEBRACIÓN ---
         function startCelebration() {
-            const msgs = [
-                "¡Eres una máquina imparable!",
-                "Has dominado el entrenamiento.",
-                "Tu cuerpo te lo agradecerá mañana.",
-                "Nivel de energía: ¡Máximo!",
-                "Un paso más cerca de tu mejor versión."
-            ];
-            document.getElementById('congrats-msg').innerText = msgs[Math.floor(Math.random() * msgs.length)];
             document.getElementById('final-streak').innerText = history.length;
             
             const container = document.getElementById('confetti-container');
@@ -351,7 +366,7 @@
             document.getElementById('confetti-container').innerHTML = '';
         }
 
-        // --- CONFIGURACIÓN & EDICIÓN ---
+        // --- CONFIGURACIÓN ---
         function toggleType(type) {
             currentType = type;
             document.getElementById('btn-reps').classList.toggle('active', type === 'reps');
@@ -370,14 +385,12 @@
             if(!name || !val) return;
 
             if (editingId) {
-                // Modo Edición
                 const index = exercises.findIndex(ex => ex.id === editingId);
                 if (index !== -1) {
                     exercises[index] = { ...exercises[index], name, value: parseInt(val), type: currentType };
                 }
                 cancelEdit();
             } else {
-                // Modo Añadir
                 exercises.push({ id: Date.now(), name, value: parseInt(val), type: currentType });
             }
 
@@ -390,19 +403,13 @@
         function editEx(id) {
             const ex = exercises.find(e => e.id === id);
             if (!ex) return;
-
             editingId = id;
             document.getElementById('ex-name').value = ex.name;
             document.getElementById('ex-val').value = ex.value;
             toggleType(ex.type);
-
             document.getElementById('form-title').innerText = "Editando Ejercicio";
-            document.getElementById('btn-add-ex').innerText = "Actualizar Ejercicio";
-            document.getElementById('btn-add-ex').classList.replace('bg-white', 'bg-blue-600');
-            document.getElementById('btn-add-ex').classList.replace('text-black', 'text-white');
+            document.getElementById('btn-add-ex').innerText = "Actualizar";
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
-            
-            // Scroll al inicio del form
             document.getElementById('view-config').scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -412,8 +419,6 @@
             document.getElementById('ex-val').value = "";
             document.getElementById('form-title').innerText = "Nuevo Ejercicio";
             document.getElementById('btn-add-ex').innerText = "Añadir";
-            document.getElementById('btn-add-ex').classList.replace('bg-blue-600', 'bg-white');
-            document.getElementById('btn-add-ex').classList.replace('text-white', 'text-black');
             document.getElementById('btn-cancel-edit').classList.add('hidden');
         }
 
@@ -424,14 +429,9 @@
         function renderConfig() {
             const list = document.getElementById('exercise-list');
             list.innerHTML = '';
-            
             exercises.forEach((ex, index) => {
                 const item = document.createElement('div');
                 item.className = 'exercise-item apple-card p-4 flex items-center justify-between';
-                item.draggable = true;
-                item.dataset.id = ex.id;
-                item.dataset.index = index;
-                
                 item.innerHTML = `
                     <div class="flex items-center gap-4 flex-1">
                         <div class="text-gray-600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9h8M8 15h8"></path></svg></div>
@@ -441,57 +441,19 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="editEx(${ex.id})" class="text-blue-400 p-2 bg-blue-400/10 rounded-lg">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
+                        <button onclick="editEx(${ex.id})" class="p-2 bg-blue-400/10 rounded-lg text-blue-400">
+                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         <button onclick="removeEx(${ex.id})" class="text-red-400 p-2 bg-red-400/10 rounded-lg">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                            </svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                         </button>
                     </div>
                 `;
-
-                // Eventos Drag and Drop
-                item.addEventListener('dragstart', (e) => {
-                    item.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', index);
-                });
-
-                item.addEventListener('dragend', () => {
-                    item.classList.remove('dragging');
-                    saveExercises();
-                });
-
-                item.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    const draggingItem = list.querySelector('.dragging');
-                    const siblings = [...list.querySelectorAll('.exercise-item:not(.dragging)')];
-                    let nextSibling = siblings.find(sibling => {
-                        return e.clientY <= sibling.offsetTop + sibling.offsetHeight / 2;
-                    });
-                    
-                    if (draggingItem) {
-                        list.insertBefore(draggingItem, nextSibling);
-                    }
-                });
-
-                item.addEventListener('drop', () => {
-                    const newOrderIds = [...list.querySelectorAll('.exercise-item')].map(el => parseInt(el.dataset.id));
-                    const newExercises = newOrderIds.map(id => exercises.find(ex => ex.id === id));
-                    exercises = newExercises;
-                    saveExercises();
-                });
-
                 list.appendChild(item);
             });
         }
 
         function removeEx(id) {
-            if (editingId === id) cancelEdit();
             exercises = exercises.filter(ex => ex.id !== id);
             saveExercises();
             renderConfig();
@@ -500,8 +462,15 @@
         // --- ENTRENAMIENTO ---
         function startWorkout() {
             if(exercises.length === 0) return alert("Configura ejercicios primero");
-            activeExIndex = 0; activeSeriesIndex = 1; isResting = false;
-            navigateTo('active'); updateActiveUI();
+            
+            // IMPORTANTE: Inicializar voz al primer toque del botón Empezar
+            initVoiceSystem();
+            
+            activeExIndex = 0; 
+            activeSeriesIndex = 1; 
+            isResting = false;
+            navigateTo('active'); 
+            updateActiveUI();
         }
 
         function updateActiveUI() {
@@ -510,6 +479,9 @@
             document.getElementById('active-ex-count').innerText = `Ej. ${activeExIndex + 1} de ${exercises.length}`;
             document.getElementById('active-ex-name').innerText = ex.name;
             document.getElementById('btn-skip-rest').classList.add('hidden');
+            
+            say("Siguiente ejercicio: " + ex.name);
+
             if(ex.type === 'reps') {
                 document.getElementById('ui-reps').classList.remove('hidden');
                 document.getElementById('ui-time').classList.add('hidden');
@@ -523,23 +495,33 @@
         }
 
         function startRest() {
-            isResting = true; document.getElementById('active-ex-name').innerText = "Descanso";
-            document.getElementById('ui-reps').classList.add('hidden'); document.getElementById('ui-time').classList.remove('hidden');
-            document.getElementById('timer-bar').classList.add('rest-mode'); document.getElementById('btn-skip-rest').classList.remove('hidden');
-            resetTimer(60); toggleTimer();
+            isResting = true; 
+            document.getElementById('active-ex-name').innerText = "Descanso";
+            document.getElementById('ui-reps').classList.add('hidden'); 
+            document.getElementById('ui-time').classList.remove('hidden');
+            document.getElementById('timer-bar').classList.add('rest-mode'); 
+            document.getElementById('btn-skip-rest').classList.remove('hidden');
+            say("Descansa un minuto");
+            resetTimer(60); 
+            toggleTimer();
         }
 
         function resetTimer(seconds) {
-            clearInterval(timerInterval); timerInterval = null;
-            timeLeft = seconds; totalTime = seconds; updateTimerDisplay();
+            clearInterval(timerInterval); 
+            timerInterval = null;
+            timeLeft = seconds; 
+            totalTime = seconds; 
+            updateTimerDisplay();
             const btn = document.getElementById('btn-timer-control');
             if(isResting) btn.classList.add('hidden');
-            else { btn.classList.remove('hidden'); btn.innerText = "Empezar"; btn.className = "w-full bg-orange-500 py-6 rounded-3xl font-bold text-xl"; }
+            else { btn.classList.remove('hidden'); btn.innerText = "Empezar"; }
         }
 
         function toggleTimer() {
-            if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-            else {
+            if(timerInterval) { 
+                clearInterval(timerInterval); 
+                timerInterval = null; 
+            } else {
                 timerInterval = setInterval(() => {
                     timeLeft -= 0.1;
                     if(timeLeft <= 0) {
@@ -576,7 +558,6 @@
 
         function exitWorkout() { if(confirm("¿Salir?")) { clearInterval(timerInterval); navigateTo('home'); } }
 
-        // --- LÓGICA DE HOME ---
         function getWeeklySessions() {
             const now = new Date();
             const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)));
@@ -590,11 +571,9 @@
             document.getElementById('stat-series').innerText = totalSeries;
             document.getElementById('stat-total-sessions').innerText = history.length;
             document.getElementById('stat-streak').innerText = history.length;
-            
             const flame = document.getElementById('flame-icon');
             if (history.length > 0) flame.classList.remove('hidden');
             else flame.classList.add('hidden');
-
             const goal = 3;
             const progress = Math.min((weeklyCount / goal) * 100, 100);
             document.getElementById('weekly-progress').style.width = progress + "%";
@@ -609,6 +588,12 @@
 
         setInterval(updateTime, 1000);
         window.onload = () => { updateTime(); loadHome(); };
+        
+        // Precargar voces (algunos navegadores lo necesitan)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
     </script>
 </body>
 </html>
